@@ -11,21 +11,16 @@ import com.oliveira.anotaai.domain.product.ProductDTO;
 import com.oliveira.anotaai.domain.product.exceptions.ProductNotFoundException;
 
 import com.oliveira.anotaai.repositories.ProductRepository;
-import com.oliveira.anotaai.services.aws.AwsSnsService;
-import com.oliveira.anotaai.services.aws.MessageDTO;
 
 @Service
 public class ProductService {
 
-  private final CategoryService categoryService;
-  private final ProductRepository productRepository;
-  private final AwsSnsService snsService;
+  private CategoryService categoryService;
+  private ProductRepository productRepository;
 
-  public ProductService(CategoryService categoryService, ProductRepository productRepository,
-      AwsSnsService snsService) {
+  public ProductService(CategoryService categoryService, ProductRepository productRepository) {
     this.categoryService = categoryService;
     this.productRepository = productRepository;
-    this.snsService = snsService;
   }
 
   public Product insert(ProductDTO productData) {
@@ -37,27 +32,19 @@ public class ProductService {
     newProduct.setCategory(category);
 
     this.productRepository.save(newProduct);
-
-    // publish in the topic
-    this.snsService.publish(new MessageDTO(newProduct.toString()));
-
     return newProduct;
-
   }
 
   public List<Product> getAll() {
     return productRepository.findAll();
-
   }
 
   public Product update(String id, ProductDTO productData) {
     Product product = this.productRepository.findById(id)
         .orElseThrow(ProductNotFoundException::new);
 
-    if (productData.categoryId() != null) {
-      // Existing category set the category
-      this.categoryService.getById(productData.categoryId()).ifPresent(product::setCategory);
-    }
+    // Existing category set the category
+    this.categoryService.getById(productData.categoryId()).ifPresent(product::setCategory);
 
     if (!productData.title().isEmpty())
       product.setTitle(productData.title());
@@ -68,9 +55,6 @@ public class ProductService {
 
     // update
     this.productRepository.save(product);
-
-    // publish in the topic
-    this.snsService.publish(new MessageDTO(product.toString()));
 
     return product;
   }

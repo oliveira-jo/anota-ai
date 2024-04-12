@@ -9,28 +9,19 @@ import com.oliveira.anotaai.domain.category.Category;
 import com.oliveira.anotaai.domain.category.CategoryDTO;
 import com.oliveira.anotaai.domain.category.exceptions.CategoryNotFoundException;
 import com.oliveira.anotaai.repositories.CategoryRepository;
-import com.oliveira.anotaai.services.aws.AwsSnsService;
-import com.oliveira.anotaai.services.aws.MessageDTO;
 
 @Service
 public class CategoryService {
 
   private CategoryRepository categoryRepository;
-  private final AwsSnsService snsService;
 
-  public CategoryService(CategoryRepository categoryRepository, AwsSnsService snsService) {
+  public CategoryService(CategoryRepository categoryRepository) {
     this.categoryRepository = categoryRepository;
-    this.snsService = snsService;
   }
 
   public Category insert(CategoryDTO categoryData) {
-
     Category newCategory = new Category(categoryData);
     this.categoryRepository.save(newCategory);
-
-    // publish in the topic
-    this.snsService.publish(new MessageDTO(newCategory.toString()));
-
     return newCategory;
   }
 
@@ -53,9 +44,6 @@ public class CategoryService {
 
     // update
     this.categoryRepository.save(category);
-
-    // publish in the topic
-    this.snsService.publish(new MessageDTO(category.toString()));
 
     return category;
   }

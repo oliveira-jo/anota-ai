@@ -18,4 +18,5 @@ public class mongoDBConfig {
   public MongoTemplate mongoTemplate() {
     return new MongoTemplate(mongoConfigure());
   }
+
 }
