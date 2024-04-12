@@ -11,20 +11,24 @@ import com.oliveira.anotaai.domain.product.ProductDTO;
 import com.oliveira.anotaai.domain.product.exceptions.ProductNotFoundException;
 
 import com.oliveira.anotaai.repositories.ProductRepository;
+import com.oliveira.anotaai.services.aws.AwsSnsService;
+import com.oliveira.anotaai.services.aws.MessageDTO;
 
 @Service
 public class ProductService {
 
-  private CategoryService categoryService;
-  private ProductRepository productRepository;
+  private final CategoryService categoryService;
+  private final ProductRepository productRepository;
+  private final AwsSnsService snsService;
 
-  public ProductService(CategoryService categoryService, ProductRepository productRepository) {
+  public ProductService(CategoryService categoryService, ProductRepository productRepository,
+      AwsSnsService snsService) {
     this.categoryService = categoryService;
     this.productRepository = productRepository;
+    this.snsService = snsService;
   }
 
   public Product insert(ProductDTO productData) {
-    // Existing category
     Category category = this.categoryService.getById(productData.categoryId())
         .orElseThrow(CategoryNotFoundException::new);
 
@@ -32,29 +36,27 @@ public class ProductService {
     newProduct.setCategory(category);
 
     this.productRepository.save(newProduct);
-    return newProduct;
-  }
+    this.snsService.publish(new MessageDTO(newProduct.toString()));
 
-  public List<Product> getAll() {
-    return productRepository.findAll();
+    return newProduct;
   }
 
   public Product update(String id, ProductDTO productData) {
     Product product = this.productRepository.findById(id)
         .orElseThrow(ProductNotFoundException::new);
 
-    // Existing category set the category
     this.categoryService.getById(productData.categoryId()).ifPresent(product::setCategory);
 
     if (!productData.title().isEmpty())
       product.setTitle(productData.title());
     if (!productData.description().isEmpty())
       product.setDescription(productData.description());
-    if (!(productData.price() != null))
+    if (!(productData.price() == null))
       product.setPrice(productData.price());
 
-    // update
     this.productRepository.save(product);
+
+    this.snsService.publish(new MessageDTO(product.toString()));
 
     return product;
   }
@@ -63,8 +65,12 @@ public class ProductService {
     Product product = this.productRepository.findById(id)
         .orElseThrow(ProductNotFoundException::new);
 
-    // delete
     this.productRepository.delete(product);
-    ;
+    this.snsService.publish(new MessageDTO(product.deleteToString()));
   }
+
+  public List<Product> getAll() {
+    return productRepository.findAll();
+  }
+
 }

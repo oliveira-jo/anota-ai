@@ -9,28 +9,26 @@ import com.oliveira.anotaai.domain.category.Category;
 import com.oliveira.anotaai.domain.category.CategoryDTO;
 import com.oliveira.anotaai.domain.category.exceptions.CategoryNotFoundException;
 import com.oliveira.anotaai.repositories.CategoryRepository;
+import com.oliveira.anotaai.services.aws.AwsSnsService;
+import com.oliveira.anotaai.services.aws.MessageDTO;
 
 @Service
 public class CategoryService {
 
-  private CategoryRepository categoryRepository;
+  private final CategoryRepository categoryRepository;
+  private final AwsSnsService snsService;
 
-  public CategoryService(CategoryRepository categoryRepository) {
+  public CategoryService(CategoryRepository categoryRepository, AwsSnsService snsService) {
     this.categoryRepository = categoryRepository;
+    this.snsService = snsService;
   }
 
   public Category insert(CategoryDTO categoryData) {
     Category newCategory = new Category(categoryData);
     this.categoryRepository.save(newCategory);
+    this.snsService.publish(new MessageDTO(newCategory.toString()));
+
     return newCategory;
-  }
-
-  public List<Category> getAll() {
-    return categoryRepository.findAll();
-  }
-
-  public Optional<Category> getById(String id) {
-    return categoryRepository.findById(id);
   }
 
   public Category update(String id, CategoryDTO categoryData) {
@@ -42,8 +40,8 @@ public class CategoryService {
     if (!categoryData.description().isEmpty())
       category.setDescription(categoryData.description());
 
-    // update
     this.categoryRepository.save(category);
+    this.snsService.publish(new MessageDTO(category.toString()));
 
     return category;
   }
@@ -52,8 +50,15 @@ public class CategoryService {
     Category category = this.categoryRepository.findById(id)
         .orElseThrow(CategoryNotFoundException::new);
 
-    // delete
     this.categoryRepository.delete(category);
-    ;
+    this.snsService.publish(new MessageDTO(category.deleteToString()));
+  }
+
+  public List<Category> getAll() {
+    return categoryRepository.findAll();
+  }
+
+  public Optional<Category> getById(String id) {
+    return categoryRepository.findById(id);
   }
 }
